@@ -1,0 +1,23 @@
+{
+  "name": "learn-crud",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@visactor/vue-vtable": "^1.18.3",
+    "vue": "^3.4.31"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.5",
+    "naive-ui": "^2.41.0",
+    "typescript": "^5.2.2",
+    "vfonts": "^0.0.3",
+    "vite": "^5.3.4",
+    "vue-tsc": "^2.0.24"
+  }
+}
