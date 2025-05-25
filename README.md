@@ -13,3 +13,6 @@ cargo tauri dev
 对应内容
 【1.文本数据转为JSON数据 of "Rust 实战：电影信息维护（命令行版）"】
 https://www.bilibili.com/video/BV1spJVzCEv8?vd_source=815da4d219cd869eab3c60217436c2aa
+
+【3.实现CRUD of "Rust 实战：电影信息维护（命令行版）"】
+https://www.bilibili.com/video/BV1NwjtzCE7W?vd_source=815da4d219cd869eab3c60217436c2aa
