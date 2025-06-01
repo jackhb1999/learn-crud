@@ -1,0 +1,10 @@
+server:
+  port: 3001
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: fackpg
+  database: test
+  schema: public
