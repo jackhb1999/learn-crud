@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::sync::LazyLock;
 use crate::config::database::DatabaseConfig;
 
-mod server;
+pub mod server;
 mod database;
 
 static CONFIG: LazyLock<AppConfig> =
