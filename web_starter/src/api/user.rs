@@ -2,17 +2,19 @@ use crate::app::AppState;
 use crate::common::{Page, PaginationParams};
 use crate::entity::prelude::User;
 use crate::entity::user;
-use crate::error::ApiResult;
+use crate::error::{ApiError, ApiResult};
 use crate::response::ApiResponse;
 use anyhow::Context;
 use axum::Router;
 use axum::extract::State;
-use axum::routing::get;
+use axum::routing::{get, put};
 
+use crate::entity::user::ActiveModel;
+use crate::path::Path;
 use crate::query::Query;
-use crate::valid::{Valid, ValidQuery};
+use crate::valid::{Valid, ValidJson, ValidQuery};
 use sea_orm::prelude::*;
-use sea_orm::{Condition, EntityTrait, QueryOrder, QueryTrait};
+use sea_orm::{ActiveValue, Condition, EntityTrait, IntoActiveModel, QueryOrder, QueryTrait};
 use serde::Deserialize;
 use validator::Validate;
 
@@ -20,6 +22,8 @@ pub fn create_router() -> Router<AppState> {
     Router::new()
         .route("/", get(query_users))
         .route("/page", get(find_page))
+        .route("/update/{id}", put(update))
+        .route("/delete/{id}", get(delete))
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -104,4 +108,74 @@ async fn find_page(
     let page = pagination.to_page(total, items);
 
     Ok(ApiResponse::success(Some(page)))
+}
+
+#[derive(Deserialize, Validate, Debug, DeriveIntoActiveModel)]
+pub struct UserParams {
+    #[validate(length(min = 1, max = 10, message = "用户名长度必须在1-10之间"))]
+    pub user_code: String,
+    pub username: String,
+    pub password: String,
+    pub dept_code: Option<String>,
+    pub role_code: Option<String>,
+    pub menus: Option<String>,
+    // #[validate(custom(function = "crate::validation::is_mobile_phone"))]
+    // pub mobile_phone:String,
+
+    // #[serde(default)]
+    // pub enabled:bool,
+}
+
+#[axum::debug_handler]
+async fn create(
+    State(AppState { db }): State<AppState>,
+    ValidJson(params): ValidJson<UserParams>,
+) -> ApiResult<ApiResponse<user::Model>> {
+    let mut active_model = params.into_active_model();
+    active_model.password = ActiveValue::Set(bcrypt::hash(
+        // 为什么这里要&
+        &active_model.password.take().unwrap(),
+        bcrypt::DEFAULT_COST,
+    )?);
+    let result = active_model.insert(&db).await?;
+    Ok(ApiResponse::success(Some(result)))
+}
+
+#[axum::debug_handler]
+async fn update(
+    State(AppState { db }): State<AppState>,
+    // 为什么用Path,而不是ValidPath
+    Path(id): Path<i32>,
+    ValidJson(params): ValidJson<UserParams>,
+) -> ApiResult<ApiResponse<user::Model>> {
+    let existed_user = User::find_by_id(id)
+        .one(&db)
+        .await?
+        .ok_or_else(|| ApiError::Biz(format!("User with id {} not found", id)))?;
+    let password = params.password.clone();
+    let mut active_model = params.into_active_model();
+    active_model.id = ActiveValue::Set(existed_user.id);
+    if password.is_empty() {
+        // 密码为空，设置为旧密码
+        active_model.password = ActiveValue::Set(existed_user.password);
+    } else {
+        // 密码非空，转Hash
+        active_model.password = ActiveValue::Set(bcrypt::hash(&password, bcrypt::DEFAULT_COST)?);
+    }
+    let result = active_model.update(&db).await?;
+
+    Ok(ApiResponse::success(Some(result)))
+}
+
+#[axum::debug_handler]
+async fn delete(
+    State(AppState { db }): State<AppState>,
+    Path(id): Path<i32>,
+) -> ApiResult<ApiResponse<()>> {
+    let existed_user = User::find_by_id(id)
+        .one(&db)
+        .await?
+        .ok_or_else(|| ApiError::Biz(format!("User with id {} not found", id)))?;
+    let result = existed_user.delete(&db).await?;
+    Ok(ApiResponse::success(None))
 }

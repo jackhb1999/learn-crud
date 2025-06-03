@@ -27,6 +27,8 @@ pub enum ApiError {
     Json(#[from] JsonRejection),
     #[error("Validation Error:{0}")]
     Validation(String),
+    #[error("Bcrypt Error:{0}")]
+    Bcrypt(#[from] bcrypt::BcryptError),
 }
 
 impl From<ValidRejection<ApiError>> for ApiError {
@@ -50,6 +52,7 @@ impl ApiError {
             Self::Path(_) => StatusCode::BAD_REQUEST,
             Self::Json(_) => StatusCode::BAD_REQUEST,
             Self::Validation(_) => StatusCode::BAD_REQUEST,
+            Self::Bcrypt(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::config;
+use crate::{config, id};
 use crate::server::Server;
 use crate::{database, logger};
 use axum::Router;
@@ -16,6 +16,7 @@ impl AppState {
 
 pub async fn run(router: Router<AppState>) -> anyhow::Result<()> {
     logger::init();
+    id::init()?;
     let db = database::init().await?;
     let state = AppState::new(db);
     Server::new(&config::get().server())
