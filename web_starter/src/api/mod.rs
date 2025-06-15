@@ -1,14 +1,20 @@
-use crate::app::AppState;
-use crate::error::{ApiError, ApiResult};
-use axum::Router;
 
+use axum::Router;
+use crate::app::AppState;
+use crate::app::error::{ApiError, ApiResult};
+use crate::app::middleware::get_auth_layer;
+use crate::app::response::ApiResponse;
 mod user;
+mod auth;
 
 pub fn create_router() -> Router<AppState> {
     Router::new()
         .nest(
             "/api",
-            Router::new().nest("/user", user::create_router()).fallback(
+            Router::new().nest("/user", user::create_router())
+                // .route_layer(get_auth_layer())
+                .nest("/auth", auth::create_router())
+                .fallback(
                 async || -> ApiResult<()> {
                     tracing::warn!("Not found");
                     Err(ApiError::NotFound)

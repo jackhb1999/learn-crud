@@ -1,4 +1,4 @@
-use crate::response::ApiResponse;
+use crate::app::response::ApiResponse;
 use axum::extract::rejection::{JsonRejection, PathRejection, QueryRejection};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -29,6 +29,10 @@ pub enum ApiError {
     Validation(String),
     #[error("Bcrypt Error:{0}")]
     Bcrypt(#[from] bcrypt::BcryptError),
+    #[error("JWT Error:{0}")]
+    JWT(#[from] jsonwebtoken::errors::Error),
+    #[error("Unauthenticated:{0}")]
+    Unauthenticated(String),
 }
 
 impl From<ValidRejection<ApiError>> for ApiError {
@@ -53,6 +57,7 @@ impl ApiError {
             Self::Json(_) => StatusCode::BAD_REQUEST,
             Self::Validation(_) => StatusCode::BAD_REQUEST,
             Self::Bcrypt(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::JWT(_) | Self::Unauthenticated(_) => StatusCode::UNAUTHORIZED,
         }
     }
 }
@@ -62,5 +67,11 @@ impl IntoResponse for ApiError {
         let status_code = self.status_code();
         let body = Json(ApiResponse::<()>::error(self.to_string()));
         (status_code, body).into_response()
+    }
+}
+
+impl From<ApiError> for Response {
+    fn from(value: ApiError) -> Self {
+        value.into_response()
     }
 }

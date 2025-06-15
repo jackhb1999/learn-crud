@@ -1,4 +1,4 @@
-use crate::error::ApiError;
+use crate::app::error::ApiError;
 use axum::extract::{FromRequest, FromRequestParts};
 use axum_valid::HasValidate;
 #[derive(Debug, Clone, Default, FromRequest)]

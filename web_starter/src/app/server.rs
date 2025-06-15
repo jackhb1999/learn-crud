@@ -1,6 +1,7 @@
 use crate::app::AppState;
+use crate::app::auth::Principal;
+use crate::app::latency::LatencyOnResponse;
 use crate::config::server::ServerConfig;
-use crate::latency::LatencyOnResponse;
 use axum::Router;
 use axum::extract::{DefaultBodyLimit, Request};
 use bytesize::ByteSize;

@@ -4,7 +4,7 @@ use sea_orm::ActiveValue;
 use sea_orm::entity::prelude::*;
 use sea_orm::prelude::async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use crate::id;
+use crate::app::id;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
 #[sea_orm(table_name = "user")]

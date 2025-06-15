@@ -1,18 +1,19 @@
 use crate::app::AppState;
-use crate::common::{Page, PaginationParams};
+use crate::app::common::{Page, PaginationParams};
+use crate::app::error::{ApiError, ApiResult};
+use crate::app::response::ApiResponse;
 use crate::entity::prelude::User;
 use crate::entity::user;
-use crate::error::{ApiError, ApiResult};
-use crate::response::ApiResponse;
 use anyhow::Context;
 use axum::Router;
 use axum::extract::State;
-use axum::routing::{get, put};
+use axum::routing::{get, post, put};
 
+use crate::app::path::Path;
+use crate::app::query::Query;
+use crate::app::utils::encode_password;
+use crate::app::valid::{Valid, ValidJson, ValidQuery};
 use crate::entity::user::ActiveModel;
-use crate::path::Path;
-use crate::query::Query;
-use crate::valid::{Valid, ValidJson, ValidQuery};
 use sea_orm::prelude::*;
 use sea_orm::{ActiveValue, Condition, EntityTrait, IntoActiveModel, QueryOrder, QueryTrait};
 use serde::Deserialize;
@@ -22,6 +23,7 @@ pub fn create_router() -> Router<AppState> {
     Router::new()
         .route("/", get(query_users))
         .route("/page", get(find_page))
+        .route("/create", post(create))
         .route("/update/{id}", put(update))
         .route("/delete/{id}", get(delete))
 }
@@ -132,11 +134,8 @@ async fn create(
     ValidJson(params): ValidJson<UserParams>,
 ) -> ApiResult<ApiResponse<user::Model>> {
     let mut active_model = params.into_active_model();
-    active_model.password = ActiveValue::Set(bcrypt::hash(
-        // 为什么这里要&
-        &active_model.password.take().unwrap(),
-        bcrypt::DEFAULT_COST,
-    )?);
+    active_model.password =
+        ActiveValue::Set(encode_password(&active_model.password.take().unwrap())?);
     let result = active_model.insert(&db).await?;
     Ok(ApiResponse::success(Some(result)))
 }
@@ -153,14 +152,19 @@ async fn update(
         .await?
         .ok_or_else(|| ApiError::Biz(format!("User with id {} not found", id)))?;
     let password = params.password.clone();
+    let old_passwd = existed_user.password.clone();
+    let mut existed_active_model = existed_user.into_active_model();
     let mut active_model = params.into_active_model();
-    active_model.id = ActiveValue::Set(existed_user.id);
+    existed_active_model.clone_from(&active_model);
+    // active_model.id = ActiveValue::Set(existed_user.id);
+    // unchanged 是设置为不变的意思
+    existed_active_model.id = ActiveValue::Unchanged(id);
     if password.is_empty() {
         // 密码为空，设置为旧密码
-        active_model.password = ActiveValue::Set(existed_user.password);
+        existed_active_model.password = ActiveValue::Unchanged(old_passwd);
     } else {
         // 密码非空，转Hash
-        active_model.password = ActiveValue::Set(bcrypt::hash(&password, bcrypt::DEFAULT_COST)?);
+        existed_active_model.password = ActiveValue::Set(encode_password(&password)?);
     }
     let result = active_model.update(&db).await?;
 

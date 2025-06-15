@@ -1,4 +1,4 @@
-use crate::server::Server;
+use crate::app::server::Server;
 use serde::{Deserialize, Deserializer};
 use std::fmt::Display;
 use std::str::FromStr;
